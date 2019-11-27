@@ -1,0 +1,11 @@
+Room,Neighbourhood,0-100,100-200,200-300,300-400,400-500,500-600
+Private Room,Queen,59,13,0,0,0,0
+Private Room,Manhattan,68,26,0,0,1,0
+Private Room,Brooklyn,60,10,0,0,0,0
+Private Room,Staten Island,2,0,0,0,0,0
+Private Room,Bronx,6,0,0,0,0,0
+Entire home/apt,Queen,13,10,0,0,0,0
+Entire home/apt,Manhattan,10,31,12,3,1,1
+Entire home/apt,Brooklyn,17,59,8,4,1,0
+Entire home/apt,Staten Island,1,0,0,0,0,0
+Entire home/apt,Bronx,2,1,0,0,0,0

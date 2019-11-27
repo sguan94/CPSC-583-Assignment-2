@@ -1,0 +1,167 @@
+<!--
+    Reference: https://bl.ocks.org/LemoNode/5a64865728c6059ed89388b5f83d6b67
+-->
+
+<html>
+<head>
+    <meta charset ="utf-8">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <style>
+        body {
+            margin: auto;
+            width: 650px;
+            font: 12px arial;
+        }
+    </style>
+</head>
+
+<body>
+
+    <svg id="chart" width="650" height="400"></svg>
+
+    Select Room Type:
+    <select id="room_type"></select>
+
+    <input type="checkbox" id="sort">
+    Toggle sort
+
+    <script>
+
+        d3.csv("test.csv").then(d => chart(d))
+
+        function chart(csv) {
+
+            let keys = csv.columns.slice(2);
+
+            let room   = [...new Set(csv.map(d => d.Room))]
+            let nb = [...new Set(csv.map(d => d.Neighbourhood))]
+
+            let options = d3.select("#room_type").selectAll("option")
+                .data(room)
+                .enter().append("option")
+                .text(d => d)
+
+            let svg = d3.select("#chart"),
+                margin = {top: 35, left: 35, bottom: 0, right: 0},
+                width = +svg.attr("width") - margin.left - margin.right,
+                height = +svg.attr("height") - margin.top - margin.bottom;
+
+            let x = d3.scaleBand()
+                .range([margin.left, width - margin.right])
+                .padding(0.1)
+
+            let y = d3.scaleLinear()
+                .rangeRound([height - margin.bottom, margin.top])
+
+            let xAxis = svg.append("g")
+                .attr("transform", `translate(0,${height - margin.bottom})`)
+                .attr("class", "x-axis")
+
+            let yAxis = svg.append("g")
+                .attr("transform", `translate(${margin.left},0)`)
+                .attr("class", "y-axis")
+
+            let colors = ["GreenYellow", "MediumTurquoise", "DarkGoldenrod", "Green", "FireBrick", "Navy"]
+            let texts = ["0 ~ 100", "100 ~ 200", "200 ~ 300", "300 ~ 400", "400 ~ 500", "500 ~ 600"]
+            let z = d3.scaleOrdinal()
+                .range(colors)
+                .domain(keys);
+
+            update(d3.select("#room_type").property("value"), 0)
+
+            // add legend
+            svg.append("circle").attr("cx",500).attr("cy",50).attr("r", 6).style("fill", "GreenYellow")
+            svg.append("text").attr("x", 520).attr("y", 50).text("Price: 0 ~ 100").style("font-size", "15px").attr("alignment-baseline","middle")
+
+            svg.append("circle").attr("cx",500).attr("cy",70).attr("r", 6).style("fill", "MediumTurquoise")
+            svg.append("text").attr("x", 520).attr("y", 70).text("Price: 100 ~ 200").style("font-size", "15px").attr("alignment-baseline","middle")
+
+            svg.append("circle").attr("cx",500).attr("cy",90).attr("r", 6).style("fill", "DarkGoldenrod")
+            svg.append("text").attr("x", 520).attr("y", 90).text("Price: 200 ~ 300").style("font-size", "15px").attr("alignment-baseline","middle")
+
+            svg.append("circle").attr("cx",500).attr("cy",110).attr("r", 6).style("fill", "Green")
+            svg.append("text").attr("x", 520).attr("y", 110).text("Price: 300 ~ 400").style("font-size", "15px").attr("alignment-baseline","middle")
+
+            svg.append("circle").attr("cx",500).attr("cy",130).attr("r", 6).style("fill", "FireBrick")
+            svg.append("text").attr("x", 520).attr("y", 130).text("Price: 400 ~ 500").style("font-size", "15px").attr("alignment-baseline","middle")
+
+            svg.append("circle").attr("cx",500).attr("cy",150).attr("r", 6).style("fill", "Navy")
+            svg.append("text").attr("x", 520).attr("y", 150).text("Price: 500 ~ 600").style("font-size", "15px").attr("alignment-baseline","middle")
+
+
+
+            function update(input, speed) {
+
+                let data = csv.filter(f => f.Room == input)
+
+                data.forEach(function(d) {
+                    d.total = d3.sum(keys, k => +d[k])
+                    return d
+                })
+
+                y.domain([0, d3.max(data, d => d3.sum(keys, k => +d[k]))]).nice();
+
+                svg.selectAll(".y-axis").transition().duration(speed)
+                    .call(d3.axisLeft(y).ticks(null, "s"))
+
+                data.sort(d3.select("#sort").property("checked")
+                    ? (a, b) => b.total - a.total
+                    : (a, b) => nb.indexOf(a.Neighbourhood) - nb.indexOf(b.Neighbourhood))
+
+                x.domain(data.map(d => d.Neighbourhood));
+
+                svg.selectAll(".x-axis").transition().duration(speed)
+                    .call(d3.axisBottom(x).tickSizeOuter(0))
+
+                let group = svg.selectAll("g.layer")
+                    .data(d3.stack().keys(keys)(data), d => d.key)
+
+                group.exit().remove()
+
+                group.enter().append("g")
+                    .classed("layer", true)
+                    .attr("fill", d => z(d.key));
+
+                let bars = svg.selectAll("g.layer").selectAll("rect")
+                    .data(d => d, e => e.data.Neighbourhood);
+
+                bars.exit().remove()
+
+                bars.enter().append("rect")
+                    .attr("width", x.bandwidth())
+                    .merge(bars)
+                    .transition().duration(speed)
+                    .attr("x", d => x(d.data.Neighbourhood))
+                    .attr("y", d => y(d[1]))
+                    .attr("height", d => y(d[0]) - y(d[1]))
+
+                let text = svg.selectAll(".text")
+                    .data(data, d => d.Neighbourhood);
+
+                text.exit().remove()
+
+                text.enter().append("text")
+                    .attr("class", "text")
+                    .attr("text-anchor", "middle")
+                    .merge(text)
+                    .transition().duration(speed)
+                    .attr("x", d => x(d.Neighbourhood) + x.bandwidth() / 2)
+                    .attr("y", d => y(d.total) - 5)
+                    .text(d => d.total)
+            }
+
+            let select = d3.select("#room_type")
+                .on("change", function() {
+                    update(this.value, 750)
+                })
+
+            let checkbox = d3.select("#sort")
+                .on("click", function() {
+                    update(select.property("value"), 750)
+                })
+        }
+
+    </script>
+
+</body>
+</html>
